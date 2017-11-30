@@ -72,7 +72,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -127,6 +129,7 @@ func main() {
 		return
 	}
 	k.show(name)
+	k.toClipboard(name)
 }
 
 type Keychain struct {
@@ -283,6 +286,21 @@ func (c *Keychain) code(name string) string {
 		code = totp(k.raw, time.Now(), k.digits)
 	}
 	return fmt.Sprintf("%0*d", k.digits, code)
+}
+
+func (c *Keychain) toClipboard(name string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "linux":
+		cmd = exec.Command("xsel", "--input", "--clipboard")
+	case "darwin":
+		cmd = exec.Command("pbcopy")
+	}
+	wc, _ := cmd.StdinPipe()
+	cmd.Start()
+	wc.Write([]byte(c.code(name)))
+	wc.Close()
+	cmd.Wait()
 }
 
 func (c *Keychain) show(name string) {
